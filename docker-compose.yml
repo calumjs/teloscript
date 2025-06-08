@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  teloscript-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=info
+      - PYTHONUNBUFFERED=1
+      # API Keys from .env file
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN}
+    env_file:
+      - .env
+    volumes:
+      # Mount for persistent logs
+      - ./logs:/app/logs
+      # Mount config directory for MCP configurations
+      - ./config:/app/config
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Remove Docker socket mount for better security
+    # Only uncomment if you specifically need Docker-in-Docker
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock
+
+  # Nginx reverse proxy (optional for production)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      # Create a basic nginx config inline or mount from a file
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - teloscript-api
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  logs:
+    driver: local 
