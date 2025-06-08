@@ -5,6 +5,10 @@
 
 TELOSCRIPT is a sophisticated agent orchestration platform that coordinates  MCP (Model Context Protocol) servers toward any goal you can think of. Unlike chat-based MCP implementations, TELOSCRIPT empowers fully autonomous goal resolution by seamlessly orchestrating your provided MCP servers into a purposeful, coordinated system.
 
+## 🎬 Demo Video
+
+[![TELOSCRIPT Demo](https://img.youtube.com/vi/4LPrMRU65bo/maxresdefault.jpg)](https://youtu.be/4LPrMRU65bo)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
