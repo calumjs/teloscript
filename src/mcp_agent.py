@@ -6,7 +6,7 @@ import os
 import sys
 from typing import Dict, Any, List, Optional, Callable
 from loguru import logger
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 from pydantic import BaseModel, Field
 
 try:
@@ -47,12 +47,29 @@ class LLMPoweredMCPAgent:
         self.start_time = time.time()
         self.iterations_used = 0
         self.cancelled = False
+        self.llm_client: AsyncOpenAI | AsyncAzureOpenAI = None
         
         api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is required")
+        azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        api_version = os.getenv("AZURE_OPENAI_VERSION")
+        azure_openai_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        if api_key:
+            self.llm_client = AsyncOpenAI(api_key=api_key)
+        elif azure_api_key:
+            if azure_endpoint:
+                if api_version:
+                    self.llm_client = AsyncAzureOpenAI(api_key=azure_api_key, azure_endpoint=azure_endpoint, api_version=api_version)
+                else:
+                    raise ValueError("AZURE_OPENAI_VERSION environment variable is required")
+            else:
+                raise ValueError("AZURE_OPENAI_ENDPOINT environment variable is required")
+        elif api_version:
+            self.llm_client = AsyncOpenAI(api_key=api_key, api_version=api_version)
+        else:
+            raise ValueError("OPENAI_API_KEY or AZURE_OPENAI_API_KEY environment variable is required")
         
-        self.llm_client = AsyncOpenAI(api_key=api_key)
+        
         self.conversation_history = []
         self.tool_schemas = {}
         self.current_execution_plan = []
