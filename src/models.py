@@ -109,4 +109,38 @@ class PromptInvocation(BaseModel):
     """Represents a prompt invocation on an MCP server"""
     server_name: str
     prompt_name: str
-    arguments: Dict[str, Any] = Field(default_factory=dict) 
+    arguments: Dict[str, Any] = Field(default_factory=dict)
+
+# Purpose Endpoint Models
+class PurposeEndpointConfig(BaseModel):
+    """Configuration for a purpose endpoint"""
+    slug: str = Field(description="Unique identifier for the endpoint (e.g., 'handle-github-webhook')")
+    name: str = Field(description="Human-readable name")
+    description: str = Field(description="Purpose and functionality description")
+    prompt_template: str = Field(description="Template prompt that will be used for all requests")
+    mcp_servers: List[str] = Field(description="List of MCP server names to use")
+    max_iterations: int = Field(default=10, description="Maximum iterations for goal completion")
+    timeout: int = Field(default=300, description="Overall timeout in seconds")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    enabled: bool = Field(default=True, description="Whether the endpoint is active")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PurposeEndpointRequest(BaseModel):
+    """Request to execute a purpose endpoint"""
+    endpoint_slug: str = Field(description="The slug of the purpose endpoint to execute")
+    input_data: Union[Dict[str, Any], str, Any] = Field(description="Input data for the endpoint (any format)")
+    request_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+class PurposeEndpointResponse(BaseModel):
+    """Response from a purpose endpoint execution"""
+    request_id: str
+    endpoint_slug: str
+    status: AgentStatus
+    result: str
+    execution_time: float
+    iterations_used: int
+    input_data: Union[Dict[str, Any], str, Any]
+    output_data: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    completed_at: datetime = Field(default_factory=datetime.utcnow) 

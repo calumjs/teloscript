@@ -1,0 +1,160 @@
+{
+  "handle-github-webhook": {
+    "slug": "handle-github-webhook",
+    "name": "GitHub Webhook Handler",
+    "description": "Consume GitHub webhooks and process them appropriately",
+    "prompt_template": "Consume this webhook data and process it as appropriate. Analyze the webhook type, extract relevant information, and take appropriate actions based on the event type and payload. Consider the repository context, user permissions, and event-specific requirements.",
+    "mcp_servers": [
+      "github",
+      "filesystem"
+    ],
+    "max_iterations": 15,
+    "timeout": 300,
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "webhook_data": {
+          "type": "object",
+          "description": "The complete webhook payload from GitHub"
+        },
+        "event_type": {
+          "type": "string",
+          "description": "The type of GitHub event (e.g., push, pull_request, issues)"
+        },
+        "repository": {
+          "type": "string",
+          "description": "Repository name in format owner/repo"
+        },
+        "action": {
+          "type": "string",
+          "description": "The specific action within the event type"
+        }
+      },
+      "required": [
+        "webhook_data"
+      ]
+    },
+    "output_schema": null,
+    "tags": [
+      "github",
+      "webhook",
+      "automation",
+      "integration"
+    ],
+    "enabled": true,
+    "created_at": "2024-01-01 00:00:00+00:00",
+    "updated_at": "2024-01-01 00:00:00+00:00"
+  },
+  "analyze-code-changes": {
+    "slug": "analyze-code-changes",
+    "name": "Code Change Analyzer",
+    "description": "Analyze code changes and provide insights",
+    "prompt_template": "Analyze the provided code changes thoroughly. Identify the type of changes, potential impacts on the codebase, code quality issues, security concerns, and provide specific recommendations for improvement. Consider best practices, maintainability, and potential risks.",
+    "mcp_servers": [
+      "filesystem",
+      "github"
+    ],
+    "max_iterations": 12,
+    "timeout": 240,
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "file_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of file paths to analyze"
+        },
+        "diff_data": {
+          "type": "object",
+          "description": "Git diff information"
+        },
+        "commit_message": {
+          "type": "string",
+          "description": "Commit message for context"
+        }
+      },
+      "required": [
+        "file_paths"
+      ]
+    },
+    "output_schema": null,
+    "tags": [
+      "code-analysis",
+      "review",
+      "quality",
+      "development"
+    ],
+    "enabled": true,
+    "created_at": "2024-01-01 00:00:00+00:00",
+    "updated_at": "2024-01-01 00:00:00+00:00"
+  },
+  "research-topic": {
+    "slug": "research-topic",
+    "name": "Topic Researcher",
+    "description": "Research a given topic using web search and document findings",
+    "prompt_template": "Research the provided topic thoroughly using available resources. Search for current information, gather relevant data from multiple sources, analyze trends and patterns, and compile a comprehensive report with proper citations, insights, and actionable conclusions.",
+    "mcp_servers": [
+      "brave-search",
+      "filesystem",
+      "tavily"
+    ],
+    "max_iterations": 20,
+    "timeout": 600,
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "The topic to research"
+        },
+        "scope": {
+          "type": "string",
+          "description": "Research scope and focus areas"
+        },
+        "output_format": {
+          "type": "string",
+          "enum": [
+            "report",
+            "summary",
+            "detailed"
+          ],
+          "description": "Desired output format"
+        }
+      },
+      "required": [
+        "topic"
+      ]
+    },
+    "output_schema": null,
+    "tags": [
+      "research",
+      "information-gathering",
+      "analysis",
+      "documentation"
+    ],
+    "enabled": true,
+    "created_at": "2024-01-01 00:00:00+00:00",
+    "updated_at": "2024-01-01 00:00:00+00:00"
+  },
+  "test-endpoint": {
+    "slug": "test-endpoint",
+    "name": "Test Endpoint",
+    "description": "A test endpoint for validation",
+    "prompt_template": "Process this test input",
+    "mcp_servers": [
+      "filesystem"
+    ],
+    "max_iterations": 10,
+    "timeout": 300,
+    "input_schema": null,
+    "output_schema": null,
+    "tags": [
+      "test"
+    ],
+    "enabled": true,
+    "created_at": "2025-06-18 11:42:52.268872",
+    "updated_at": "2025-06-18 11:42:52.268872"
+  }
+}

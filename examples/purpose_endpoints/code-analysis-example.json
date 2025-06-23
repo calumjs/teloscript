@@ -1,0 +1,14 @@
+{
+  "file_paths": [
+    "src/api.py",
+    "src/mcp_agent.py",
+    "src/purpose_manager.py"
+  ],
+  "diff_data": {
+    "files_changed": 3,
+    "lines_added": 150,
+    "lines_deleted": 5,
+    "summary": "Added purpose endpoints feature with API integration"
+  },
+  "commit_message": "Add purpose endpoints feature - allows creating predefined agent configurations with baked-in prompts and MCP servers"
+} 

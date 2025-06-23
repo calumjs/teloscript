@@ -1,0 +1,27 @@
+{
+  "webhook_data": {
+    "event_type": "push",
+    "repository": "calumjs/teloscript",
+    "ref": "refs/heads/main",
+    "commits": [
+      {
+        "id": "abc123def456",
+        "message": "Add purpose endpoints feature",
+        "author": {
+          "name": "Calum Simpson",
+          "email": "calum@example.com"
+        },
+        "added": ["src/purpose_manager.py", "config/purpose_endpoints.json"],
+        "modified": ["src/api.py", "src/models.py"],
+        "removed": []
+      }
+    ],
+    "pusher": {
+      "name": "calumjs",
+      "email": "calum@example.com"
+    }
+  },
+  "event_type": "push",
+  "repository": "calumjs/teloscript",
+  "action": "pushed"
+} 

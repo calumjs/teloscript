@@ -18,18 +18,22 @@ import os
 try:
     from .models import (
         MCPAgentConfig, AgentGoal, AgentStatus, StatusUpdate, 
-        AgentRequest, MCPServerConfig, AgentResponse
+        AgentRequest, MCPServerConfig, AgentResponse,
+        PurposeEndpointConfig, PurposeEndpointRequest, PurposeEndpointResponse
     )
     from .mcp_agent import LLMPoweredMCPAgent
     from .orchestrator import WorkflowOrchestrator
+    from .purpose_manager import PurposeEndpointManager
 except ImportError:
     sys.path.append(os.path.dirname(__file__))
     from models import (
         MCPAgentConfig, AgentGoal, AgentStatus, StatusUpdate, 
-        AgentRequest, MCPServerConfig, AgentResponse
+        AgentRequest, MCPServerConfig, AgentResponse,
+        PurposeEndpointConfig, PurposeEndpointRequest, PurposeEndpointResponse
     )
     from mcp_agent import LLMPoweredMCPAgent
     from orchestrator import WorkflowOrchestrator
+    from purpose_manager import PurposeEndpointManager
 
 load_dotenv()
 
@@ -48,6 +52,7 @@ app.add_middleware(
 )
 
 orchestrator = WorkflowOrchestrator()
+purpose_manager = PurposeEndpointManager()
 status_streams: Dict[str, List[StatusUpdate]] = {}
 active_streams: Dict[str, bool] = {}
 orchestration_data: Dict[str, Dict] = {}
@@ -341,6 +346,23 @@ async def cleanup_completed_agent(agent_id: str):
                 queue.put_nowait(removal_update)
             except:
                 pass
+
+async def broadcast_orchestration_update(update_data: dict):
+    """Broadcast an update to all orchestration subscribers"""
+    failed_queues = []
+    for queue in orchestration_subscribers:
+        try:
+            queue.put_nowait(update_data)
+        except asyncio.QueueFull:
+            failed_queues.append(queue)
+        except Exception as e:
+            logger.warning(f"Error broadcasting orchestration update: {e}")
+            failed_queues.append(queue)
+    
+    # Remove failed queues
+    for queue in failed_queues:
+        if queue in orchestration_subscribers:
+            orchestration_subscribers.remove(queue)
 
 @app.get("/")
 async def root():
@@ -1452,6 +1474,204 @@ async def orchestration_interface():
             overflow-y: auto;
             margin-bottom: 20px;
         }
+
+        /* Purpose Endpoints Styles */
+        .purpose-endpoints-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .purpose-endpoint-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--glass-shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .purpose-endpoint-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(135deg, var(--wisdom-gold) 0%, var(--purpose-purple) 50%, var(--intelligence-cyan) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .purpose-endpoint-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(139, 92, 246, 0.2);
+        }
+        
+        .purpose-endpoint-card:hover::before {
+            opacity: 1;
+        }
+        
+        .endpoint-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        
+        .endpoint-name {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+            margin-bottom: 6px;
+        }
+        
+        .endpoint-slug-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .endpoint-slug {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--purpose-purple);
+            background: rgba(139, 92, 246, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+        
+        .btn-copy-url {
+            background: rgba(139, 92, 246, 0.08);
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            border-radius: 4px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            color: var(--purpose-purple);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 20px;
+            opacity: 0.7;
+        }
+        
+        .btn-copy-url:hover {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.3);
+            opacity: 1;
+            transform: scale(1.05);
+        }
+        
+        .btn-copy-url:active {
+            transform: scale(0.95);
+            background: rgba(139, 92, 246, 0.2);
+        }
+        
+        .endpoint-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+        
+        .endpoint-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .endpoint-servers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .server-tag {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--intelligence-cyan);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+        
+        .endpoint-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .endpoint-tag {
+            background: rgba(251, 191, 36, 0.1);
+            color: var(--wisdom-gold);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            border: 1px solid rgba(251, 191, 36, 0.2);
+        }
+        
+        .endpoint-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .endpoint-status.enabled {
+            color: var(--harmony-green);
+        }
+        
+        .endpoint-status.disabled {
+            color: var(--text-muted);
+        }
+        
+        .endpoint-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            align-items: center;
+        }
+        
+        .btn-test {
+            background: var(--emergence-gradient);
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .btn-edit {
+            background: var(--orchestration-gradient);
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .btn-delete {
+            background: var(--autonomous-gradient);
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
         
         .config-checkbox {
             display: flex;
@@ -2034,7 +2254,7 @@ async def orchestration_interface():
             <h1><span class="emoji">🎯</span><span class="title-text">TELOSCRIPT</span></h1>
             <div class="subtitle">
                 <span class="subtitle-accent">Purposeful</span> Agent Orchestration System
-                <div class="version-badge">v1.0.0 Emergent</div>
+                <div class="version-badge">v1.1.0 Purposeful</div>
             </div>
             <div class="orchestration-status">
                 <div class="status-item">
@@ -2053,6 +2273,7 @@ async def orchestration_interface():
             <div class="nav-tabs">
                 <div class="nav-tab active" onclick="showTab('orchestration')">🎼 Orchestration</div>
                 <div class="nav-tab" onclick="showTab('configs')">🔧 MCP Configuration</div>
+                <div class="nav-tab" onclick="showTab('purpose-endpoints')">🎯 Purpose Endpoints</div>
             </div>
         </div>
     </div>
@@ -2146,6 +2367,27 @@ async def orchestration_interface():
                 </div>
             </div>
         </div>
+
+        <!-- Purpose Endpoints Tab -->
+        <div id="purpose-endpoints" class="tab-content">
+            <div class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h2>🎯 Purpose Endpoints</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9em; margin: 5px 0;">
+                            Predefined agent configurations with baked-in prompts and MCP servers
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-secondary btn-small" onclick="refreshPurposeEndpoints()">🔄 Refresh</button>
+                        <button class="btn btn-small" onclick="showCreateEndpointModal()">➕ New Endpoint</button>
+                    </div>
+                </div>
+                <div class="purpose-endpoints-grid" id="purpose-endpoints-grid">
+                    <div class="empty-state">Loading purpose endpoints...</div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- Config Creation/Edit Modal -->
@@ -2209,6 +2451,66 @@ async def orchestration_interface():
             <div id="details-config" class="details-content">
                 <div id="details-config-content"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Purpose Endpoint Creation/Edit Modal -->
+    <div id="purpose-endpoint-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 id="purpose-modal-title">Create Purpose Endpoint</h3>
+                <button class="close" onclick="closePurposeEndpointModal()">&times;</button>
+            </div>
+            <form id="purpose-endpoint-form">
+                <div class="form-group">
+                    <label class="form-label">Endpoint Slug</label>
+                    <input type="text" id="purpose-slug" class="form-input" placeholder="e.g., handle-webhook" required>
+                    <small style="color: var(--text-muted); font-size: 0.8em;">URL-friendly identifier (lowercase, hyphens only)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Display Name</label>
+                    <input type="text" id="purpose-name" class="form-input" placeholder="e.g., GitHub Webhook Handler" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" id="purpose-description" class="form-input" placeholder="Brief description of what this endpoint does" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Prompt Template</label>
+                    <textarea id="purpose-prompt" class="form-textarea" style="min-height: 150px;" placeholder="Enter the agent's purpose and instructions. The input data will be automatically appended to your prompt." required></textarea>
+                    <small style="color: var(--text-muted); font-size: 0.8em;">Input data will be automatically appended to your prompt when the endpoint is executed</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">MCP Servers</label>
+                    <div id="purpose-mcp-selector" class="config-selector">
+                        <div class="empty-state">Loading available MCP servers...</div>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.8em;">Select the MCP servers this endpoint should have access to</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Tags (comma-separated)</label>
+                    <input type="text" id="purpose-tags" class="form-input" placeholder="e.g., webhook, github, automation">
+                    <small style="color: var(--text-muted); font-size: 0.8em;">Optional tags for organization and filtering</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="purpose-enabled" checked style="margin-right: 8px;">
+                        Enabled
+                    </label>
+                    <small style="color: var(--text-muted); font-size: 0.8em; display: block; margin-top: 4px;">Whether this endpoint is active and can be executed</small>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
+                    <button type="button" class="btn btn-secondary btn-small" onclick="closePurposeEndpointModal()">Cancel</button>
+                    <button type="submit" class="btn btn-small">Save Purpose Endpoint</button>
+                </div>
+            </form>
         </div>
     </div>
     
@@ -2443,6 +2745,8 @@ async def orchestration_interface():
                 loadConfigs();
             } else if (tabName === 'orchestration') {
                 loadConfigSelector();
+            } else if (tabName === 'purpose-endpoints') {
+                loadPurposeEndpoints();
             }
         }
         
@@ -2623,6 +2927,309 @@ async def orchestration_interface():
                     `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em;">${error.message}</div>`);
             }
         }
+
+        // Purpose Endpoints Management
+        let purposeEndpoints = {};
+        let editingEndpointSlug = null;
+
+        async function loadPurposeEndpoints() {
+            try {
+                const response = await fetch('/purpose/endpoints');
+                const data = await response.json();
+                purposeEndpoints = data.endpoints.reduce((acc, endpoint) => {
+                    acc[endpoint.slug] = endpoint;
+                    return acc;
+                }, {});
+                renderPurposeEndpoints();
+            } catch (error) {
+                console.error('Error loading purpose endpoints:', error);
+                showErrorNotification('Load Error', 'Failed to load purpose endpoints');
+            }
+        }
+
+        function renderPurposeEndpoints() {
+            const grid = document.getElementById('purpose-endpoints-grid');
+            if (Object.keys(purposeEndpoints).length === 0) {
+                grid.innerHTML = '<div class="empty-state">No purpose endpoints found. Create your first one!</div>';
+                return;
+            }
+
+            grid.innerHTML = Object.values(purposeEndpoints).map(endpoint => `
+                <div class="purpose-endpoint-card">
+                    <div class="endpoint-header">
+                        <div>
+                            <div class="endpoint-name">${endpoint.name}</div>
+                            <div class="endpoint-slug-container">
+                                <div class="endpoint-slug">/purpose/${endpoint.slug}</div>
+                                <button class="btn-copy-url" onclick="copyEndpointUrl('${endpoint.slug}')" title="Copy full URL">
+                                    📋
+                                </button>
+                            </div>
+                        </div>
+                        <div class="endpoint-status ${endpoint.enabled ? 'enabled' : 'disabled'}">
+                            ${endpoint.enabled ? '✅ Enabled' : '❌ Disabled'}
+                        </div>
+                    </div>
+                    <div class="endpoint-description">${endpoint.description}</div>
+                    <div class="endpoint-meta">
+                        <div class="endpoint-servers">
+                            ${endpoint.mcp_servers.map(server => `<span class="server-tag">🖥️ ${server}</span>`).join('')}
+                        </div>
+                        <div class="endpoint-tags">
+                            ${endpoint.tags.map(tag => `<span class="endpoint-tag">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="endpoint-actions">
+                        <button class="btn btn-test btn-small" onclick="testPurposeEndpoint('${endpoint.slug}')">
+                            <span>🚀</span><span>Test</span>
+                        </button>
+                        <button class="btn btn-edit btn-small" onclick="editPurposeEndpoint('${endpoint.slug}')">
+                            <span>✏️</span><span>Edit</span>
+                        </button>
+                        <button class="btn btn-delete btn-small" onclick="deletePurposeEndpoint('${endpoint.slug}')">
+                            <span>🗑️</span><span>Delete</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function testPurposeEndpoint(slug) {
+            const endpoint = purposeEndpoints[slug];
+            let testData = '';
+            
+            // Provide example data based on endpoint
+            if (slug === 'handle-github-webhook') {
+                testData = JSON.stringify({
+                    "webhook_data": {
+                        "event_type": "push",
+                        "repository": "example/repo",
+                        "commits": [{"id": "abc123", "message": "Test commit"}]
+                    }
+                }, null, 2);
+            } else if (slug === 'research-topic') {
+                testData = "Latest developments in AI agent orchestration";
+            } else if (slug === 'analyze-code-changes') {
+                testData = JSON.stringify({
+                    "file_paths": ["src/api.py", "src/models.py"],
+                    "commit_message": "Add purpose endpoints feature"
+                }, null, 2);
+            }
+            
+            const inputData = prompt(`Enter test data for ${endpoint.name} (JSON or plain text):`, testData);
+            if (!inputData) return;
+            
+            try {
+                showInfoNotification('Executing Endpoint', `Testing ${endpoint.name}...`);
+                
+                // Try to detect if input is JSON or plain text
+                let isJSON = false;
+                let requestBody = inputData;
+                let contentType = 'text/plain';
+                
+                try {
+                    // Try to parse as JSON
+                    const parsed = JSON.parse(inputData);
+                    // If parsing succeeds, it's valid JSON
+                    isJSON = true;
+                    requestBody = JSON.stringify(parsed);
+                    contentType = 'application/json';
+                } catch (jsonError) {
+                    // If parsing fails, treat as plain text
+                    isJSON = false;
+                    requestBody = inputData;
+                    contentType = 'text/plain';
+                }
+                
+                const response = await fetch(`/purpose/${slug}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': contentType },
+                    body: requestBody
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showSuccessNotification('Endpoint Test Complete', 
+                        `${endpoint.name} executed successfully!`,
+                        `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em; max-height: 200px; overflow-y: auto;">
+                            <strong>Input Type:</strong> ${isJSON ? 'JSON' : 'Plain Text'}<br>
+                            <strong>Status:</strong> ${result.status}<br>
+                            <strong>Execution Time:</strong> ${result.execution_time.toFixed(2)}s<br>
+                            <strong>Iterations:</strong> ${result.iterations_used}<br>
+                            <strong>Result:</strong><br>
+                            ${result.result.substring(0, 500)}${result.result.length > 500 ? '...' : ''}
+                        </div>`);
+                } else {
+                    showErrorNotification('Endpoint Test Failed', 
+                        `Failed to execute ${endpoint.name}`,
+                        `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em;">${result.detail || 'Unknown error'}</div>`);
+                }
+            } catch (error) {
+                showErrorNotification('Test Error', 'Execution error', 
+                    `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em;">${error.message}</div>`);
+            }
+        }
+
+        function editPurposeEndpoint(slug) {
+            const endpoint = purposeEndpoints[slug];
+            document.getElementById('purpose-modal-title').textContent = 'Edit Purpose Endpoint';
+            document.getElementById('purpose-slug').value = endpoint.slug;
+            document.getElementById('purpose-slug').disabled = true;
+            document.getElementById('purpose-name').value = endpoint.name;
+            document.getElementById('purpose-description').value = endpoint.description;
+            document.getElementById('purpose-prompt').value = endpoint.prompt_template;
+            document.getElementById('purpose-tags').value = endpoint.tags.join(', ');
+            document.getElementById('purpose-enabled').checked = endpoint.enabled;
+            
+            editingEndpointSlug = slug;
+            loadMcpSelectorForPurpose(endpoint.mcp_servers);
+            document.getElementById('purpose-endpoint-modal').style.display = 'block';
+        }
+
+        async function deletePurposeEndpoint(slug) {
+            const endpoint = purposeEndpoints[slug];
+            if (confirm(`Are you sure you want to delete the purpose endpoint "${endpoint.name}"?`)) {
+                try {
+                    const response = await fetch(`/purpose/endpoints/${slug}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        loadPurposeEndpoints();
+                        showSuccessNotification('Endpoint Deleted', `${endpoint.name} removed successfully!`);
+                    } else {
+                        const error = await response.json();
+                        showErrorNotification('Delete Error', 'Failed to delete endpoint',
+                            `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em;">${error.detail}</div>`);
+                    }
+                } catch (error) {
+                    showErrorNotification('Delete Error', 'An error occurred while deleting', 
+                        `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em;">${error.message}</div>`);
+                }
+            }
+        }
+
+        function showCreateEndpointModal() {
+            document.getElementById('purpose-modal-title').textContent = 'Create Purpose Endpoint';
+            document.getElementById('purpose-endpoint-form').reset();
+            document.getElementById('purpose-slug').disabled = false;
+            document.getElementById('purpose-enabled').checked = true;
+            editingEndpointSlug = null;
+            loadMcpSelectorForPurpose([]);
+            document.getElementById('purpose-endpoint-modal').style.display = 'block';
+        }
+
+        function refreshPurposeEndpoints() {
+            loadPurposeEndpoints();
+        }
+
+        function copyEndpointUrl(slug) {
+            const baseUrl = window.location.origin;
+            const fullUrl = `${baseUrl}/purpose/${slug}`;
+            
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                showSuccessNotification('URL Copied!', 
+                    'Endpoint URL copied to clipboard',
+                    `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em; font-family: monospace;">${fullUrl}</div>`);
+            }).catch(err => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = fullUrl;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                showSuccessNotification('URL Copied!', 
+                    'Endpoint URL copied to clipboard',
+                    `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em; font-family: monospace;">${fullUrl}</div>`);
+            });
+        }
+
+        function closePurposeEndpointModal() {
+            document.getElementById('purpose-endpoint-modal').style.display = 'none';
+        }
+
+        async function loadMcpSelectorForPurpose(selectedServers = []) {
+            try {
+                const response = await fetch('/mcp-configs');
+                const data = await response.json();
+                const mcpConfigs = data.configs;
+                renderMcpSelectorForPurpose(mcpConfigs, selectedServers);
+            } catch (error) {
+                console.error('Error loading MCP configs for purpose selector:', error);
+            }
+        }
+
+        function renderMcpSelectorForPurpose(mcpConfigs, selectedServers = []) {
+            const selector = document.getElementById('purpose-mcp-selector');
+            if (Object.keys(mcpConfigs).length === 0) {
+                selector.innerHTML = '<div class="empty-state">No MCP configurations available. Create some in the MCP Configs tab!</div>';
+                return;
+            }
+
+            selector.innerHTML = Object.entries(mcpConfigs).map(([id, config]) => `
+                <label class="config-checkbox">
+                    <input type="checkbox" value="${id}" ${selectedServers.includes(id) ? 'checked' : ''}>
+                    <div class="config-checkbox-label">
+                        <div class="config-checkbox-name">${config.name}</div>
+                        <div class="config-checkbox-desc">${config.description}</div>
+                    </div>
+                </label>
+            `).join('');
+        }
+
+        // Purpose Endpoint form submission
+        document.getElementById('purpose-endpoint-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const slug = document.getElementById('purpose-slug').value;
+            const name = document.getElementById('purpose-name').value;
+            const description = document.getElementById('purpose-description').value;
+            const promptTemplate = document.getElementById('purpose-prompt').value;
+            const tagsInput = document.getElementById('purpose-tags').value;
+            const enabled = document.getElementById('purpose-enabled').checked;
+            
+            // Parse tags
+            const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+            
+            // Get selected MCP servers
+            const selectedServers = Array.from(document.querySelectorAll('#purpose-mcp-selector input[type="checkbox"]:checked'))
+                .map(checkbox => checkbox.value);
+            
+            const payload = {
+                slug: slug,
+                name: name,
+                description: description,
+                prompt_template: promptTemplate,
+                mcp_servers: selectedServers,
+                tags: tags,
+                enabled: enabled
+            };
+            
+            try {
+                const url = editingEndpointSlug ? `/purpose/endpoints/${editingEndpointSlug}` : '/purpose/endpoints';
+                const method = editingEndpointSlug ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    closePurposeEndpointModal();
+                    loadPurposeEndpoints();
+                    showSuccessNotification('Purpose Endpoint Saved', 
+                        editingEndpointSlug ? 'Endpoint updated successfully!' : 'Endpoint created successfully!');
+                } else {
+                    const error = await response.json();
+                    showErrorNotification('Save Error', 'Failed to save purpose endpoint', 
+                        `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em;">${error.detail}</div>`);
+                }
+            } catch (error) {
+                showErrorNotification('Save Error', 'An error occurred while saving', 
+                    `<div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 0.85em;">${error.message}</div>`);
+            }
+        });
         
         // Launch agent
         async function launchAgent() {
@@ -3257,6 +3864,206 @@ async def launch_agent_with_configs(request: Request):
             "agent_id": None,
             "configs_used": []
         }
+
+# Purpose Endpoint Management
+@app.get("/purpose/endpoints")
+async def list_purpose_endpoints():
+    """List all available purpose endpoints"""
+    endpoints = purpose_manager.list_endpoints()
+    return {
+        "endpoints": [endpoint.dict() for endpoint in endpoints],
+        "count": len(endpoints)
+    }
+
+@app.get("/purpose/endpoints/{slug}")
+async def get_purpose_endpoint(slug: str):
+    """Get a specific purpose endpoint"""
+    endpoint = purpose_manager.get_endpoint(slug)
+    if not endpoint:
+        raise HTTPException(status_code=404, detail=f"Purpose endpoint '{slug}' not found")
+    return endpoint.dict()
+
+@app.post("/purpose/endpoints")
+async def create_purpose_endpoint(request: Request):
+    """Create a new purpose endpoint"""
+    try:
+        data = await request.json()
+        config = PurposeEndpointConfig(**data)
+        
+        if purpose_manager.create_endpoint(config):
+            return {"message": f"Purpose endpoint '{config.slug}' created successfully", "endpoint": config.dict()}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create purpose endpoint")
+            
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.put("/purpose/endpoints/{slug}")
+async def update_purpose_endpoint(slug: str, request: Request):
+    """Update an existing purpose endpoint"""
+    try:
+        data = await request.json()
+        config = PurposeEndpointConfig(**data)
+        
+        if purpose_manager.update_endpoint(slug, config):
+            return {"message": f"Purpose endpoint '{slug}' updated successfully", "endpoint": config.dict()}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update purpose endpoint")
+            
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/purpose/endpoints/{slug}")
+async def delete_purpose_endpoint(slug: str):
+    """Delete a purpose endpoint"""
+    if purpose_manager.delete_endpoint(slug):
+        return {"message": f"Purpose endpoint '{slug}' deleted successfully"}
+    else:
+        raise HTTPException(status_code=404, detail=f"Purpose endpoint '{slug}' not found")
+
+# Purpose Endpoint Execution
+@app.post("/purpose/{slug}")
+async def execute_purpose_endpoint(slug: str, request: Request):
+    """Execute a purpose endpoint by slug"""
+    try:
+        # Get input data - handle both JSON and plain text
+        content_type = request.headers.get("content-type", "").lower()
+        
+        if "application/json" in content_type:
+            # Parse as JSON
+            input_data = await request.json()
+        else:
+            # Treat as plain text
+            body_bytes = await request.body()
+            input_data = body_bytes.decode('utf-8') if body_bytes else ""
+        
+        # Create purpose endpoint request
+        purpose_request = PurposeEndpointRequest(
+            endpoint_slug=slug,
+            input_data=input_data
+        )
+        
+        # Get endpoint config for dashboard display
+        endpoint_config = purpose_manager.get_endpoint(slug)
+        if not endpoint_config:
+            raise HTTPException(status_code=404, detail=f"Purpose endpoint '{slug}' not found")
+        
+        # Generate agent ID for dashboard tracking
+        agent_id = purpose_request.request_id
+        
+        # Initialize orchestration data for dashboard (matching existing pattern)
+        orchestration_data[agent_id] = {
+            "agent_id": agent_id,
+            "goal": f"Purpose: {endpoint_config.name} - {str(input_data)[:50]}{'...' if len(str(input_data)) > 50 else ''}",
+            "status": "running",
+            "current_activity": f"Starting purpose endpoint: {endpoint_config.name}",
+            "progress": 0,
+            "start_time": time.time(),
+            "last_update": time.time(),
+            "iterations_used": 0,
+            "details": {
+                "endpoint_slug": slug,
+                "endpoint_name": endpoint_config.name,
+                "endpoint_description": endpoint_config.description,
+                "mcp_servers": endpoint_config.mcp_servers,
+                "input_preview": str(input_data)[:100] + "..." if len(str(input_data)) > 100 else str(input_data),
+                "type": "purpose_endpoint"
+            },
+            "recent_activities": [],
+            "execution_time": 0,
+            "result": ""
+        }
+        
+        # Broadcast initial state to dashboard
+        await broadcast_orchestration_update({
+            "type": "agent_update",
+            "agent_id": agent_id,
+            "data": orchestration_data[agent_id]
+        })
+        
+        # Create status callback for dashboard integration
+        async def dashboard_callback(update: StatusUpdate):
+            """Update dashboard with purpose endpoint progress"""
+            await status_callback(update)
+        
+        # Execute the endpoint with dashboard integration
+        response = await purpose_manager.execute_endpoint(purpose_request, dashboard_callback)
+        
+        # Update orchestration data with final result
+        if agent_id in orchestration_data:
+            orchestration_data[agent_id]["result"] = response.result
+            orchestration_data[agent_id]["iterations_used"] = response.iterations_used
+            orchestration_data[agent_id]["execution_time"] = response.execution_time
+            orchestration_data[agent_id]["status"] = response.status.value
+            orchestration_data[agent_id]["progress"] = 100
+            orchestration_data[agent_id]["current_activity"] = f"Purpose endpoint completed: {response.status.value}"
+            orchestration_data[agent_id]["last_update"] = time.time()
+            
+            # Broadcast completion to dashboard
+            await broadcast_orchestration_update({
+                "type": "agent_update",
+                "agent_id": agent_id,
+                "data": orchestration_data[agent_id]
+            })
+        
+        return response.dict()
+        
+    except Exception as e:
+        # Update orchestration data with error if agent_id exists
+        if 'agent_id' in locals() and agent_id in orchestration_data:
+            orchestration_data[agent_id]["status"] = "failed"
+            orchestration_data[agent_id]["result"] = f"Error: {str(e)}"
+            orchestration_data[agent_id]["progress"] = 100
+            orchestration_data[agent_id]["current_activity"] = f"Purpose endpoint failed: {str(e)}"
+            orchestration_data[agent_id]["last_update"] = time.time()
+            orchestration_data[agent_id]["execution_time"] = time.time() - orchestration_data[agent_id]["start_time"]
+            
+            await broadcast_orchestration_update({
+                "type": "agent_update",
+                "agent_id": agent_id,
+                "data": orchestration_data[agent_id]
+            })
+        
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/purpose/{slug}/stream")
+async def execute_purpose_endpoint_stream(slug: str, request: Request):
+    """Execute a purpose endpoint with streaming updates"""
+    try:
+        # Get input data - handle both JSON and plain text
+        content_type = request.headers.get("content-type", "").lower()
+        
+        if "application/json" in content_type:
+            # Parse as JSON
+            input_data = await request.json()
+        else:
+            # Treat as plain text
+            body_bytes = await request.body()
+            input_data = body_bytes.decode('utf-8') if body_bytes else ""
+        
+        # Create purpose endpoint request
+        purpose_request = PurposeEndpointRequest(
+            endpoint_slug=slug,
+            input_data=input_data
+        )
+        
+        # Create status callback for streaming
+        status_updates = []
+        
+        async def stream_callback(update: StatusUpdate):
+            status_updates.append(update)
+            # In a real implementation, you'd stream this to the client
+        
+        # Execute the endpoint
+        response = await purpose_manager.execute_endpoint(purpose_request, stream_callback)
+        
+        return {
+            "response": response.dict(),
+            "status_updates": [update.dict() for update in status_updates]
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
