@@ -16,8 +16,9 @@ dependencies = [
 ]
 
 [project.scripts]
-teloscript-mcp = "src.teloscript_mcp:main"
-teloscript-mcp-server = "src.teloscript_mcp:main"
+teloscript-mcp = "teloscript_mcp:main"
+teloscript-mcp-server = "teloscript_mcp:main"
 
 [tool.setuptools]
-packages = ["src"]
+py-modules = ["teloscript_mcp"]
+package-dir = {"" = "mcp_server"}
