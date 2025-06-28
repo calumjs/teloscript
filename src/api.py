@@ -4065,6 +4065,141 @@ async def execute_purpose_endpoint_stream(slug: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# MCP Server Mode
+@app.post("/mcp/server/start")
+async def start_mcp_server_mode():
+    """
+    Start TELOSCRIPT in MCP server mode
+    
+    This endpoint initiates TELOSCRIPT as an MCP server that can be used by other agents
+    for recursive orchestration.
+    """
+    try:
+        from .mcp_server import TeloscriptMCPServer
+        
+        # Create and start the MCP server
+        mcp_server = TeloscriptMCPServer(teloscript_api_url="http://localhost:8000")
+        
+        # Note: In a real implementation, this would run in a separate process
+        # For now, we'll return instructions on how to run the MCP server
+        return {
+            "message": "MCP Server mode available",
+            "instructions": [
+                "To run TELOSCRIPT as an MCP server, use the standalone script:",
+                "python teloscript_mcp_server.py",
+                "",
+                "Or configure it in your MCP client configuration:",
+                {
+                    "name": "teloscript",
+                    "command": "python",
+                    "args": ["/path/to/teloscript_mcp_server.py"],
+                    "transport": "stdio"
+                }
+            ],
+            "available_tools": [
+                "spawn_agent - Create and execute a new TELOSCRIPT agent",
+                "check_agent_status - Check the status of a running agent", 
+                "execute_purpose_endpoint - Execute a predefined purpose endpoint",
+                "list_purpose_endpoints - List all available purpose endpoints",
+                "get_agent_capabilities - List available MCP servers and their capabilities",
+                "create_workflow_template - Create a reusable workflow template",
+                "list_active_agents - List all currently active agents",
+                "cancel_agent - Cancel a running agent"
+            ],
+            "mcp_server_config": {
+                "name": "teloscript",
+                "command": "python",
+                "args": ["/path/to/teloscript_mcp_server.py"],
+                "transport": "stdio",
+                "description": "TELOSCRIPT MCP Server for recursive agent orchestration"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting MCP server mode: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to start MCP server mode: {str(e)}")
+
+@app.get("/mcp/server/info")
+async def get_mcp_server_info():
+    """Get information about TELOSCRIPT's MCP server capabilities"""
+    return {
+        "server_name": "teloscript",
+        "server_version": "1.0.0",
+        "description": "TELOSCRIPT as an MCP Server for recursive agent orchestration",
+        "capabilities": {
+            "tools": [
+                {
+                    "name": "spawn_agent",
+                    "description": "Create and execute a new TELOSCRIPT agent",
+                    "parameters": ["goal", "mcp_servers", "max_iterations", "timeout"]
+                },
+                {
+                    "name": "check_agent_status", 
+                    "description": "Check the status of a running agent",
+                    "parameters": ["agent_id"]
+                },
+                {
+                    "name": "execute_purpose_endpoint",
+                    "description": "Execute a predefined purpose endpoint",
+                    "parameters": ["endpoint_slug", "input_data"]
+                },
+                {
+                    "name": "list_purpose_endpoints",
+                    "description": "List all available purpose endpoints",
+                    "parameters": []
+                },
+                {
+                    "name": "get_agent_capabilities",
+                    "description": "List available MCP servers and their capabilities", 
+                    "parameters": []
+                },
+                {
+                    "name": "create_workflow_template",
+                    "description": "Create a reusable workflow template",
+                    "parameters": ["name", "description", "steps", "input_schema"]
+                },
+                {
+                    "name": "list_active_agents",
+                    "description": "List all currently active agents",
+                    "parameters": []
+                },
+                {
+                    "name": "cancel_agent",
+                    "description": "Cancel a running agent",
+                    "parameters": ["agent_id"]
+                }
+            ]
+        },
+        "usage_examples": [
+            {
+                "scenario": "Spawn a research agent",
+                "tool": "spawn_agent",
+                "parameters": {
+                    "goal": "Research the latest AI developments and create a summary report",
+                    "mcp_servers": ["brave-search", "filesystem"],
+                    "max_iterations": 15
+                }
+            },
+            {
+                "scenario": "Execute purpose endpoint",
+                "tool": "execute_purpose_endpoint", 
+                "parameters": {
+                    "endpoint_slug": "handle-github-webhook",
+                    "input_data": {"repository": "user/repo", "action": "push"}
+                }
+            }
+        ],
+        "installation": {
+            "standalone_script": "python teloscript_mcp_server.py",
+            "mcp_config": {
+                "name": "teloscript",
+                "command": "python",
+                "args": ["/path/to/teloscript_mcp_server.py"],
+                "transport": "stdio"
+            }
+        }
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000) 
