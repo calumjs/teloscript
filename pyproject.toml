@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "teloscript-mcp"
+version = "1.0.0"
+description = "TELOSCRIPT MCP Server - Enable recursive agent orchestration through MCP protocol"
+readme = "MCP_SERVER_README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "TELOSCRIPT Team", email = "support@teloscript.dev"}
+]
+maintainers = [
+    {name = "TELOSCRIPT Team", email = "support@teloscript.dev"}
+]
+keywords = ["mcp", "ai", "agents", "orchestration", "recursive", "automation", "teloscript"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "mcp>=1.1.0",
+    "httpx>=0.27.0",
+    "typing-extensions>=4.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.991",
+]
+
+[project.urls]
+Homepage = "https://github.com/calumjs/teloscript"
+Documentation = "https://github.com/calumjs/teloscript/blob/main/MCP_SERVER_README.md"
+Repository = "https://github.com/calumjs/teloscript"
+"Bug Reports" = "https://github.com/calumjs/teloscript/issues"
+
+[project.scripts]
+teloscript-mcp = "src.teloscript_mcp:main"
+teloscript-mcp-server = "src.teloscript_mcp:main"
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt", "*.json"]
+
+[tool.black]
+line-length = 88
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"

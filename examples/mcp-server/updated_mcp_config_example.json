@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "teloscript": {
+      "command": "teloscript-mcp",
+      "args": ["--api-url", "http://localhost:8000"],
+      "env": {}
+    },
+    "teloscript-research": {
+      "command": "teloscript-mcp",
+      "args": ["--api-url", "http://research-server:8001", "--log-level", "INFO"],
+      "env": {
+        "TELOSCRIPT_API_URL": "http://research-server:8001"
+      }
+    },
+    "teloscript-dev": {
+      "command": "teloscript-mcp",
+      "args": ["--api-url", "http://dev-server:8002", "--log-level", "DEBUG"],
+      "env": {
+        "TELOSCRIPT_API_URL": "http://dev-server:8002"
+      }
+    },
+    "teloscript-production": {
+      "command": "teloscript-mcp",
+      "args": ["--api-url", "https://teloscript-prod.company.com", "--log-level", "WARNING"],
+      "env": {
+        "TELOSCRIPT_API_URL": "https://teloscript-prod.company.com"
+      }
+    }
+  }
+}

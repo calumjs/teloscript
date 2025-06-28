@@ -17,31 +17,44 @@ This feature transforms TELOSCRIPT into an MCP server that exposes its functiona
 
 ## 🚀 Quick Start
 
-### 1. Start TELOSCRIPT API
+### 1. Install TELOSCRIPT MCP Server
+
+```bash
+# Install globally (like NPX)
+pip install -e .
+
+# Or install from PyPI (when published)
+pip install teloscript-mcp
+```
+
+### 2. Start TELOSCRIPT API
 
 ```bash
 python main.py
 ```
 
-### 2. Run as MCP Server
+### 3. Run as MCP Server
 
 ```bash
 # Option A: Default configuration
-python teloscript_mcp_server.py
+teloscript-mcp
 
 # Option B: Custom API URL
-python teloscript_mcp_server.py --api-url http://localhost:8000
+teloscript-mcp --api-url http://localhost:8000
+
+# Option C: With debug logging
+teloscript-mcp --log-level DEBUG
 ```
 
-### 3. Configure in MCP Client
+### 4. Configure in MCP Client
 
 Add to your MCP client configuration:
 
 ```json
 {
   "name": "teloscript",
-  "command": "python",
-  "args": ["/path/to/teloscript_mcp_server.py"],
+  "command": "teloscript-mcp",
+  "args": ["--api-url", "http://localhost:8000"],
   "transport": "stdio"
 }
 ```
