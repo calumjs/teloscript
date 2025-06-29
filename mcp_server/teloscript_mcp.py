@@ -23,8 +23,12 @@ from mcp.server.fastmcp import FastMCP
 # HTTP client for API calls
 import httpx
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# Set up logging - configure to use stderr to avoid interfering with MCP stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr)]
+)
 logger = logging.getLogger(__name__)
 
 
@@ -465,20 +469,28 @@ def start_api_service():
     try:
         logger.info("Starting TELOSCRIPT API service directly...")
         
-        # Import and start the API service directly
-        def run_api_service():
-            try:
-                import uvicorn
-                from teloscript_mcp.src.api import app
+                 # Import and start the API service directly
+         def run_api_service():
+             try:
+                 import uvicorn
+                 from teloscript_mcp.src.api import app
+                 
+                 # Configure loguru to not interfere with MCP stdout
+                 try:
+                     from loguru import logger as loguru_logger
+                     loguru_logger.remove()  # Remove default handler
+                     loguru_logger.add(sys.stderr, level="WARNING")  # Add stderr handler with higher level
+                 except ImportError:
+                     pass  # loguru might not be available in all contexts
                 
-                # Configure uvicorn server
-                config = uvicorn.Config(
-                    app=app,
-                    host="0.0.0.0",
-                    port=8000,
-                    log_level="info",
-                    reload=False
-                )
+                                 # Configure uvicorn server
+                 config = uvicorn.Config(
+                     app=app,
+                     host="0.0.0.0",
+                     port=8000,
+                     log_level="warning",  # Reduce verbosity to avoid stdout interference
+                     reload=False
+                 )
                 
                 server = uvicorn.Server(config)
                 server.run()
@@ -534,15 +546,30 @@ def main():
     if args.api_url:
         os.environ["TELOSCRIPT_API_URL"] = args.api_url
     
-    # Configure logging
+    # Configure logging to not interfere with MCP protocol (JSON-only stdout)
+    log_handler = logging.StreamHandler(sys.stderr)  # Use stderr instead of stdout
+    log_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+    
+    # Remove any existing handlers to avoid duplicate logs
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
     logging.basicConfig(
         level=getattr(logging, args.log_level),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        handlers=[log_handler]
     )
     
     api_service_thread = None
     
     try:
+        # Configure loguru globally to prevent stdout interference
+        try:
+            from loguru import logger as loguru_logger
+            loguru_logger.remove()  # Remove default handler
+            loguru_logger.add(sys.stderr, level="WARNING")  # Only warnings and errors to stderr
+        except ImportError:
+            pass  # loguru might not be available
+        
         api_url = get_api_url()
         logger.info("Starting TELOSCRIPT MCP Server...")
         
