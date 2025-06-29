@@ -465,6 +465,7 @@ def start_api_service():
     try:
         # Find the main.py file - check common locations
         possible_paths = [
+            Path(__file__).parent / "main.py",  # same directory as this file (for packaged version)
             Path(__file__).parent.parent / "main.py",  # ../main.py from mcp_server/
             Path("main.py"),  # current directory
             Path("../main.py"),  # parent directory

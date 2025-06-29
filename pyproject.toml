@@ -7,12 +7,16 @@ name = "teloscript-mcp"
 version = "1.0.0"
 description = "TELOSCRIPT MCP Server - Recursive agent orchestration through MCP protocol"
 authors = [{name = "TELOSCRIPT Team"}]
-readme = "MCP_SERVER_README.md"
+readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     "mcp>=1.1.0",
     "httpx>=0.27.0,<0.28.0",
     "typing-extensions>=4.8.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "python-multipart>=0.0.6",
+    "pydantic>=2.4.0",
 ]
 
 [project.scripts]
@@ -20,5 +24,11 @@ teloscript-mcp = "teloscript_mcp:main"
 teloscript-mcp-server = "teloscript_mcp:main"
 
 [tool.setuptools]
-py-modules = ["teloscript_mcp"]
-package-dir = {"" = "mcp_server"}
+packages = ["teloscript_mcp", "teloscript_mcp.src", "teloscript_mcp.config"]
+package-dir = {"teloscript_mcp" = "mcp_server", "teloscript_mcp.src" = "src", "teloscript_mcp.config" = "config"}
+py-modules = ["main"]
+
+[tool.setuptools.package-data]
+"teloscript_mcp" = ["*.py"]
+"teloscript_mcp.src" = ["*.py"]
+"teloscript_mcp.config" = ["*.json"]
