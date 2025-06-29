@@ -10,13 +10,23 @@ authors = [{name = "TELOSCRIPT Team"}]
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "mcp>=1.1.0",
+    "fastapi>=0.115.12",
+    "uvicorn>=0.34.3",
+    "pydantic>=2.9.0",
+    "docker>=7.1.0",
     "httpx>=0.27.0,<0.28.0",
+    "python-multipart>=0.0.12",
+    "aiofiles>=24.1.0",
+    "loguru>=0.7.2",
+    "typer>=0.12.0",
+    "rich>=13.9.0",
+    "pydantic-settings>=2.6.0",
+    "mcp>=1.1.0",
+    "openai==1.35.0",
+    "python-dotenv>=1.0.1",
+    "distro>=1.9.0",
+    "tqdm>=4.66.0",
     "typing-extensions>=4.8.0",
-    "fastapi>=0.104.0",
-    "uvicorn>=0.24.0",
-    "python-multipart>=0.0.6",
-    "pydantic>=2.4.0",
 ]
 
 [project.scripts]
