@@ -402,8 +402,32 @@ async def create_workflow_template(
 
 
 def get_server_config(server_name: str) -> Dict[str, Any]:
-    """Get MCP server configuration by name"""
-    configs = {
+    """Get configuration for a specific MCP server from local config files"""
+    try:
+        # Try to load local MCP configurations first
+        config_path = Path(__file__).parent.parent / "config" / "mcp_configs.json"
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
+                local_configs = json.load(f)
+                if server_name in local_configs:
+                    return local_configs[server_name]["config"]
+        
+        # Also try relative paths for different execution contexts
+        for config_dir in [Path("config"), Path("../config"), Path("../../config")]:
+            config_file = config_dir / "mcp_configs.json"
+            if config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    local_configs = json.load(f)
+                    if server_name in local_configs:
+                        return local_configs[server_name]["config"]
+        
+        logger.warning(f"Local config not found for {server_name}, using fallback")
+        
+    except Exception as e:
+        logger.warning(f"Error loading local MCP config for {server_name}: {e}")
+    
+    # Fallback to basic configurations
+    fallback_configs = {
         "filesystem": {
             "name": "filesystem",
             "command": "npx",
@@ -416,36 +440,10 @@ def get_server_config(server_name: str) -> Dict[str, Any]:
             "args": ["-y", "@modelcontextprotocol/server-brave-search"],
             "env": {"BRAVE_API_KEY": "your-api-key-here"},
             "transport": "stdio"
-        },
-        "github": {
-            "name": "github",
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-github"],
-            "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here"},
-            "transport": "stdio"
-        },
-        "memory": {
-            "name": "memory",
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-memory"],
-            "transport": "stdio"
-        },
-        "puppeteer": {
-            "name": "puppeteer",
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
-            "transport": "stdio"
-        },
-        "tavily": {
-            "name": "tavily-mcp",
-            "command": "npx",
-            "args": ["-y", "tavily-mcp@0.1.2"],
-            "env": {"TAVILY_API_KEY": "your-api-key-here"},
-            "transport": "stdio"
         }
     }
     
-    return configs.get(server_name, {
+    return fallback_configs.get(server_name, {
         "name": server_name,
         "command": "npx",
         "args": ["-y", f"@modelcontextprotocol/server-{server_name}"],
