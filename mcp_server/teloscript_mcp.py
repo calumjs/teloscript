@@ -469,29 +469,29 @@ def start_api_service():
     try:
         logger.info("Starting TELOSCRIPT API service directly...")
         
-                 # Import and start the API service directly
-         def run_api_service():
-             try:
-                 import uvicorn
-                 from teloscript_mcp.src.api import app
-                 
-                 # Configure loguru to not interfere with MCP stdout
-                 try:
-                     from loguru import logger as loguru_logger
-                     loguru_logger.remove()  # Remove default handler
-                     loguru_logger.add(sys.stderr, level="WARNING")  # Add stderr handler with higher level
-                 except ImportError:
-                     pass  # loguru might not be available in all contexts
+        # Import and start the API service directly
+        def run_api_service():
+            try:
+                import uvicorn
+                from teloscript_mcp.src.api import app
                 
-                                 # Configure uvicorn server
-                 config = uvicorn.Config(
-                     app=app,
-                     host="0.0.0.0",
-                     port=8000,
-                     log_level="warning",  # Reduce verbosity to avoid stdout interference
-                     reload=False
-                 )
-                
+                # Configure loguru to not interfere with MCP stdout
+                try:
+                    from loguru import logger as loguru_logger
+                    loguru_logger.remove()  # Remove default handler
+                    loguru_logger.add(sys.stderr, level="WARNING")  # Add stderr handler
+                except ImportError:
+                    pass  # loguru might not be available in all contexts
+               
+                # Configure uvicorn server
+                config = uvicorn.Config(
+                    app=app,
+                    host="0.0.0.0",
+                    port=8000,
+                    log_level="warning",  # Reduce verbosity to avoid stdout interference
+                    reload=False
+                )
+               
                 server = uvicorn.Server(config)
                 server.run()
                 
