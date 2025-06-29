@@ -11,6 +11,9 @@ import json
 import logging
 import sys
 import os
+import subprocess
+import threading
+import time
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
@@ -446,6 +449,57 @@ def get_server_config(server_name: str) -> Dict[str, Any]:
     })
 
 
+def check_api_service_running(api_url: str) -> bool:
+    """Check if the TELOSCRIPT API service is already running"""
+    try:
+        import httpx
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(f"{api_url}/health")
+            return response.status_code == 200
+    except:
+        return False
+
+
+def start_api_service():
+    """Start the TELOSCRIPT API service in the background"""
+    try:
+        # Find the main.py file - check common locations
+        possible_paths = [
+            Path(__file__).parent.parent / "main.py",  # ../main.py from mcp_server/
+            Path("main.py"),  # current directory
+            Path("../main.py"),  # parent directory
+        ]
+        
+        main_py_path = None
+        for path in possible_paths:
+            if path.exists():
+                main_py_path = path
+                break
+        
+        if not main_py_path:
+            logger.error("Could not find main.py to start TELOSCRIPT API service")
+            return None
+        
+        logger.info(f"Starting TELOSCRIPT API service from {main_py_path}")
+        
+        # Start the service in the background
+        process = subprocess.Popen(
+            [sys.executable, str(main_py_path)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=main_py_path.parent
+        )
+        
+        # Wait a bit for the service to start
+        time.sleep(3)
+        
+        return process
+        
+    except Exception as e:
+        logger.error(f"Failed to start TELOSCRIPT API service: {e}")
+        return None
+
+
 def main():
     """Main entry point - can be run as a command like NPX packages"""
     parser = argparse.ArgumentParser(
@@ -462,6 +516,11 @@ def main():
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
         help="Set the logging level (default: INFO)"
+    )
+    parser.add_argument(
+        "--no-auto-start",
+        action="store_true",
+        help="Don't automatically start the TELOSCRIPT API service if not running"
     )
     parser.add_argument(
         "--version",
@@ -481,9 +540,41 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     
+    api_service_process = None
+    
     try:
         api_url = get_api_url()
         logger.info("Starting TELOSCRIPT MCP Server...")
+        
+        # Check if API service is running, start if needed
+        if not check_api_service_running(api_url):
+            if args.no_auto_start:
+                logger.error(f"TELOSCRIPT API service not running at {api_url}")
+                logger.error("Start the service manually or remove --no-auto-start flag")
+                sys.exit(1)
+            else:
+                logger.info(f"TELOSCRIPT API service not running at {api_url}")
+                logger.info("Auto-starting TELOSCRIPT API service...")
+                api_service_process = start_api_service()
+                
+                if api_service_process:
+                    # Wait for service to be ready
+                    for i in range(10):  # Wait up to 10 seconds
+                        time.sleep(1)
+                        if check_api_service_running(api_url):
+                            logger.info("TELOSCRIPT API service started successfully")
+                            break
+                    else:
+                        logger.error("TELOSCRIPT API service failed to start within 10 seconds")
+                        if api_service_process:
+                            api_service_process.terminate()
+                        sys.exit(1)
+                else:
+                    logger.error("Failed to start TELOSCRIPT API service")
+                    sys.exit(1)
+        else:
+            logger.info(f"TELOSCRIPT API service already running at {api_url}")
+        
         logger.info(f"Connecting to TELOSCRIPT API at: {api_url}")
         logger.info("Server ready for MCP connections via stdio")
         
@@ -495,6 +586,15 @@ def main():
     except Exception as e:
         logger.error(f"Error running MCP server: {e}")
         sys.exit(1)
+    finally:
+        # Clean up API service if we started it
+        if api_service_process:
+            logger.info("Stopping auto-started TELOSCRIPT API service...")
+            api_service_process.terminate()
+            try:
+                api_service_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                api_service_process.kill()
 
 
 if __name__ == "__main__":
