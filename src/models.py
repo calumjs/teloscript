@@ -112,6 +112,19 @@ class PromptInvocation(BaseModel):
     arguments: Dict[str, Any] = Field(default_factory=dict)
 
 # Purpose Endpoint Models
+class PurposeEndpointLearnings(BaseModel):
+    """Learning data captured from purpose endpoint executions"""
+    successful_patterns: List[str] = Field(default_factory=list, description="Patterns that have worked well")
+    failed_patterns: List[str] = Field(default_factory=list, description="Patterns that have failed")
+    optimal_settings: Dict[str, Any] = Field(default_factory=dict, description="Optimal configuration settings discovered")
+    common_inputs: List[str] = Field(default_factory=list, description="Common input patterns observed")
+    performance_insights: List[str] = Field(default_factory=list, description="Performance-related insights")
+    error_patterns: List[str] = Field(default_factory=list, description="Common error patterns to avoid")
+    execution_stats: Dict[str, Any] = Field(default_factory=dict, description="Statistical data about executions")
+    last_updated: datetime = Field(default_factory=datetime.utcnow, description="When learnings were last updated")
+    total_executions: int = Field(default=0, description="Total number of executions")
+    success_rate: float = Field(default=0.0, description="Success rate percentage")
+
 class PurposeEndpointConfig(BaseModel):
     """Configuration for a purpose endpoint"""
     slug: str = Field(description="Unique identifier for the endpoint (e.g., 'handle-github-webhook')")
@@ -123,6 +136,7 @@ class PurposeEndpointConfig(BaseModel):
     timeout: int = Field(default=300, description="Overall timeout in seconds")
     tags: List[str] = Field(default_factory=list, description="Tags for categorization")
     enabled: bool = Field(default=True, description="Whether the endpoint is active")
+    learnings: PurposeEndpointLearnings = Field(default_factory=PurposeEndpointLearnings, description="Accumulated learnings from executions")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

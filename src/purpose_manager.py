@@ -9,7 +9,8 @@ from datetime import datetime
 try:
     from .models import (
         PurposeEndpointConfig, PurposeEndpointRequest, PurposeEndpointResponse,
-        MCPAgentConfig, AgentGoal, MCPServerConfig, AgentRequest, AgentStatus
+        PurposeEndpointLearnings, MCPAgentConfig, AgentGoal, MCPServerConfig, 
+        AgentRequest, AgentStatus
     )
     from .orchestrator import WorkflowOrchestrator
 except ImportError:
@@ -17,7 +18,8 @@ except ImportError:
     sys.path.append(os.path.dirname(__file__))
     from models import (
         PurposeEndpointConfig, PurposeEndpointRequest, PurposeEndpointResponse,
-        MCPAgentConfig, AgentGoal, MCPServerConfig, AgentRequest, AgentStatus
+        PurposeEndpointLearnings, MCPAgentConfig, AgentGoal, MCPServerConfig, 
+        AgentRequest, AgentStatus
     )
     from orchestrator import WorkflowOrchestrator
 
