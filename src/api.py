@@ -3921,6 +3921,42 @@ async def delete_purpose_endpoint(slug: str):
     else:
         raise HTTPException(status_code=404, detail=f"Purpose endpoint '{slug}' not found")
 
+@app.get("/purpose/endpoints/{slug}/learnings")
+async def get_purpose_endpoint_learnings(slug: str):
+    """Get learnings for a specific purpose endpoint"""
+    endpoint = purpose_manager.get_endpoint(slug)
+    if not endpoint:
+        raise HTTPException(status_code=404, detail=f"Purpose endpoint '{slug}' not found")
+    
+    return {
+        "endpoint_slug": slug,
+        "endpoint_name": endpoint.name,
+        "learnings": endpoint.learnings,
+        "last_updated": endpoint.updated_at,
+        "has_learnings": bool(endpoint.learnings.strip())
+    }
+
+@app.delete("/purpose/endpoints/{slug}/learnings")
+async def clear_purpose_endpoint_learnings(slug: str):
+    """Clear learnings for a specific purpose endpoint"""
+    endpoint = purpose_manager.get_endpoint(slug)
+    if not endpoint:
+        raise HTTPException(status_code=404, detail=f"Purpose endpoint '{slug}' not found")
+    
+    # Clear learnings
+    endpoint.learnings = ""
+    endpoint.updated_at = datetime.utcnow()
+    
+    # Update and save
+    purpose_manager.endpoints[slug] = endpoint
+    purpose_manager.save_endpoints()
+    
+    return {
+        "message": f"Learnings cleared for purpose endpoint '{slug}'",
+        "endpoint_slug": slug,
+        "endpoint_name": endpoint.name
+    }
+
 # Purpose Endpoint Execution
 @app.post("/purpose/{slug}")
 async def execute_purpose_endpoint(slug: str, request: Request):

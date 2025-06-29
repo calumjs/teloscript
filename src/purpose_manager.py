@@ -9,8 +9,7 @@ from datetime import datetime
 try:
     from .models import (
         PurposeEndpointConfig, PurposeEndpointRequest, PurposeEndpointResponse,
-        PurposeEndpointLearnings, MCPAgentConfig, AgentGoal, MCPServerConfig, 
-        AgentRequest, AgentStatus
+        MCPAgentConfig, AgentGoal, MCPServerConfig, AgentRequest, AgentStatus
     )
     from .orchestrator import WorkflowOrchestrator
 except ImportError:
@@ -18,8 +17,7 @@ except ImportError:
     sys.path.append(os.path.dirname(__file__))
     from models import (
         PurposeEndpointConfig, PurposeEndpointRequest, PurposeEndpointResponse,
-        PurposeEndpointLearnings, MCPAgentConfig, AgentGoal, MCPServerConfig, 
-        AgentRequest, AgentStatus
+        MCPAgentConfig, AgentGoal, MCPServerConfig, AgentRequest, AgentStatus
     )
     from orchestrator import WorkflowOrchestrator
 
@@ -176,7 +174,7 @@ class PurposeEndpointManager:
             if not endpoint.enabled:
                 raise ValueError(f"Purpose endpoint '{request.endpoint_slug}' is disabled")
             
-            # Build the prompt with input data
+            # Build the prompt with input data and learnings
             prompt = self._build_prompt(endpoint, request.input_data)
             
             # Create MCP server configurations
@@ -228,11 +226,14 @@ class PurposeEndpointManager:
                 completed_at=datetime.utcnow()
             )
             
+            # Capture learnings from this execution
+            await self._capture_learnings(endpoint, request, response, agent_response)
+            
             return response
             
         except Exception as e:
             logger.error(f"Error executing purpose endpoint: {e}")
-            return PurposeEndpointResponse(
+            response = PurposeEndpointResponse(
                 request_id=request.request_id,
                 endpoint_slug=request.endpoint_slug,
                 status=AgentStatus.FAILED,
@@ -243,12 +244,24 @@ class PurposeEndpointManager:
                 error=str(e),
                 completed_at=datetime.utcnow()
             )
+            
+            # Capture learnings from failed execution too
+            try:
+                endpoint = self.get_endpoint(request.endpoint_slug)
+                if endpoint:
+                    await self._capture_learnings(endpoint, request, response, None)
+            except Exception as learning_error:
+                logger.error(f"Error capturing learnings from failed execution: {learning_error}")
+            
+            return response
     
     def _build_prompt(self, endpoint: PurposeEndpointConfig, input_data: Any) -> str:
-        """Build the final prompt by combining template with input data"""
-        # Simple template substitution for now
-        # Could be enhanced with more sophisticated templating
+        """Build the final prompt by combining template with input data and learnings"""
         prompt = endpoint.prompt_template
+        
+        # Include learnings if available
+        if endpoint.learnings.strip():
+            prompt += f"\n\nPrevious Learnings:\n{endpoint.learnings.strip()}\n\nUse these learnings to improve your approach and avoid previous mistakes."
         
         # Convert input data to string format
         if input_data:
@@ -265,6 +278,128 @@ class PurposeEndpointManager:
             prompt += f"\n\nInput Data:\n{input_str}"
         
         return prompt
+    
+    async def _capture_learnings(self, endpoint: PurposeEndpointConfig, request: PurposeEndpointRequest, 
+                                response: PurposeEndpointResponse, agent_response=None) -> None:
+        """Capture and store learnings from the execution"""
+        try:
+            # Create a learning analysis prompt
+            learning_prompt = self._build_learning_analysis_prompt(endpoint, request, response, agent_response)
+            
+            # Create a simple agent to analyze the execution and generate learnings
+            mcp_configs = self._get_mcp_configs(["filesystem"])  # Use minimal config for learning analysis
+            
+            context = {
+                "endpoint": endpoint.slug,
+                "status": response.status.value,
+                "execution_time": response.execution_time,
+                "iterations_used": response.iterations_used
+            }
+            
+            learning_config = MCPAgentConfig(
+                servers=mcp_configs,
+                goal=AgentGoal(
+                    description=learning_prompt,
+                    context=context
+                ),
+                max_iterations=5,  # Keep it simple for learning analysis
+                timeout=60
+            )
+            
+            learning_request = AgentRequest(
+                id=f"learning-{request.request_id}",
+                config=learning_config
+            )
+            
+            # Execute learning analysis
+            learning_response = await self.orchestrator.run_single_agent(learning_request)
+            
+            if learning_response.status == AgentStatus.COMPLETED and learning_response.result:
+                # Update the endpoint's learnings
+                updated_learnings = self._combine_learnings(endpoint.learnings, learning_response.result)
+                endpoint.learnings = updated_learnings
+                endpoint.updated_at = datetime.utcnow()
+                
+                # Save the updated endpoint
+                self.endpoints[endpoint.slug] = endpoint
+                self.save_endpoints()
+                
+                logger.info(f"Updated learnings for purpose endpoint: {endpoint.slug}")
+            
+        except Exception as e:
+            logger.error(f"Error capturing learnings for endpoint {endpoint.slug}: {e}")
+    
+    def _build_learning_analysis_prompt(self, endpoint: PurposeEndpointConfig, request: PurposeEndpointRequest,
+                                      response: PurposeEndpointResponse, agent_response=None) -> str:
+        """Build a prompt for analyzing execution and generating learnings"""
+        
+        # Convert input data to string for analysis
+        input_str = ""
+        if request.input_data:
+            if isinstance(request.input_data, str):
+                input_str = request.input_data[:500] + "..." if len(request.input_data) > 500 else request.input_data
+            else:
+                try:
+                    input_str = json.dumps(request.input_data, indent=2)[:500] + "..."
+                except:
+                    input_str = str(request.input_data)[:500] + "..."
+        
+        prompt = f"""Analyze this purpose endpoint execution and provide concise learnings to improve future performance.
+
+Purpose Endpoint: {endpoint.name}
+Description: {endpoint.description}
+
+Execution Details:
+- Status: {response.status.value}
+- Execution Time: {response.execution_time:.2f} seconds
+- Iterations Used: {response.iterations_used}
+- Max Iterations: {endpoint.max_iterations}
+- Timeout: {endpoint.timeout} seconds
+
+Input Data (truncated):
+{input_str}
+
+Result (truncated):
+{response.result[:500] + "..." if len(response.result) > 500 else response.result}
+
+Error (if any):
+{response.error or "None"}
+
+Current Learnings:
+{endpoint.learnings or "None"}
+
+Based on this execution, provide updated learnings that include:
+1. What worked well (if successful)
+2. What didn't work (if failed or took too long)
+3. Patterns in the input data
+4. Performance insights
+5. Suggested improvements
+
+Provide the learnings as a concise summary that will help improve future executions. Focus on actionable insights."""
+
+        return prompt
+    
+    def _combine_learnings(self, existing_learnings: str, new_learnings: str) -> str:
+        """Combine existing learnings with new learnings"""
+        if not existing_learnings.strip():
+            return new_learnings
+        
+        if not new_learnings.strip():
+            return existing_learnings
+        
+        # Simple combination - could be enhanced with more sophisticated merging
+        combined = f"""UPDATED LEARNINGS:
+
+{new_learnings}
+
+PREVIOUS LEARNINGS:
+{existing_learnings}"""
+        
+        # Truncate if too long (keep under 4000 characters)
+        if len(combined) > 4000:
+            combined = combined[:4000] + "\n\n[Learnings truncated due to length]"
+        
+        return combined
     
     def _get_mcp_configs(self, server_names: List[str]) -> List[MCPServerConfig]:
         """Get MCP server configurations by name"""
