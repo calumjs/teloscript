@@ -36,7 +36,6 @@ teloscript-mcp-server = "teloscript_mcp:main"
 [tool.setuptools]
 packages = ["teloscript_mcp", "teloscript_mcp.src", "teloscript_mcp.config"]
 package-dir = {"teloscript_mcp" = "mcp_server", "teloscript_mcp.src" = "src", "teloscript_mcp.config" = "config"}
-py-modules = ["main"]
 
 [tool.setuptools.package-data]
 "teloscript_mcp" = ["*.py"]

@@ -463,38 +463,37 @@ def check_api_service_running(api_url: str) -> bool:
 def start_api_service():
     """Start the TELOSCRIPT API service in the background"""
     try:
-        # Find the main.py file - check common locations
-        possible_paths = [
-            Path(__file__).parent / "main.py",  # same directory as this file (for packaged version)
-            Path(__file__).parent.parent / "main.py",  # ../main.py from mcp_server/
-            Path("main.py"),  # current directory
-            Path("../main.py"),  # parent directory
-        ]
+        logger.info("Starting TELOSCRIPT API service directly...")
         
-        main_py_path = None
-        for path in possible_paths:
-            if path.exists():
-                main_py_path = path
-                break
+        # Import and start the API service directly
+        def run_api_service():
+            try:
+                import uvicorn
+                from teloscript_mcp.src.api import app
+                
+                # Configure uvicorn server
+                config = uvicorn.Config(
+                    app=app,
+                    host="0.0.0.0",
+                    port=8000,
+                    log_level="info",
+                    reload=False
+                )
+                
+                server = uvicorn.Server(config)
+                server.run()
+                
+            except Exception as e:
+                logger.error(f"Error running API service: {e}")
         
-        if not main_py_path:
-            logger.error("Could not find main.py to start TELOSCRIPT API service")
-            return None
-        
-        logger.info(f"Starting TELOSCRIPT API service from {main_py_path}")
-        
-        # Start the service in the background
-        process = subprocess.Popen(
-            [sys.executable, str(main_py_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=main_py_path.parent
-        )
+        # Start the API service in a separate thread
+        api_thread = threading.Thread(target=run_api_service, daemon=True)
+        api_thread.start()
         
         # Wait a bit for the service to start
         time.sleep(3)
         
-        return process
+        return api_thread  # Return the thread instead of a process
         
     except Exception as e:
         logger.error(f"Failed to start TELOSCRIPT API service: {e}")
@@ -541,7 +540,7 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     
-    api_service_process = None
+    api_service_thread = None
     
     try:
         api_url = get_api_url()
@@ -556,9 +555,9 @@ def main():
             else:
                 logger.info(f"TELOSCRIPT API service not running at {api_url}")
                 logger.info("Auto-starting TELOSCRIPT API service...")
-                api_service_process = start_api_service()
+                api_service_thread = start_api_service()
                 
-                if api_service_process:
+                if api_service_thread:
                     # Wait for service to be ready
                     for i in range(10):  # Wait up to 10 seconds
                         time.sleep(1)
@@ -567,8 +566,6 @@ def main():
                             break
                     else:
                         logger.error("TELOSCRIPT API service failed to start within 10 seconds")
-                        if api_service_process:
-                            api_service_process.terminate()
                         sys.exit(1)
                 else:
                     logger.error("Failed to start TELOSCRIPT API service")
@@ -589,13 +586,9 @@ def main():
         sys.exit(1)
     finally:
         # Clean up API service if we started it
-        if api_service_process:
+        if api_service_thread:
             logger.info("Stopping auto-started TELOSCRIPT API service...")
-            api_service_process.terminate()
-            try:
-                api_service_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                api_service_process.kill()
+            # For threads, we just let them end naturally since they're daemon threads
 
 
 if __name__ == "__main__":
