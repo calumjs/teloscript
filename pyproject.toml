@@ -30,8 +30,8 @@ dependencies = [
 ]
 
 [project.scripts]
-teloscript-mcp = "teloscript_mcp:main"
-teloscript-mcp-server = "teloscript_mcp:main"
+teloscript-mcp = "teloscript_mcp.launcher:main"
+teloscript-mcp-server = "teloscript_mcp.launcher:main"
 
 [tool.setuptools]
 packages = ["teloscript_mcp", "teloscript_mcp.src", "teloscript_mcp.config"]
