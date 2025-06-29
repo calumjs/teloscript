@@ -7,7 +7,7 @@ orchestrates autonomous agents to achieve goals, and returns intelligent respons
 
 import uvicorn
 from loguru import logger
-from src.api import app
+from teloscript_mcp.src.api import app
 
 def main():
     """Main entry point for TELOSCRIPT"""
