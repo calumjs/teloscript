@@ -64,7 +64,7 @@ TELOSCRIPT can also run as an MCP (Model Context Protocol) server, allowing othe
 
 ```bash
 # Run directly with uvx (no installation needed)
-uvx --from git+https://github.com/calumjs/teloscript.git@feature/mcp-server teloscript-mcp
+uvx --from git+https://github.com/calumjs/teloscript.git teloscript-mcp
 ```
 
 ### Method 2: Local Development (Recommended for Custom Configs)
