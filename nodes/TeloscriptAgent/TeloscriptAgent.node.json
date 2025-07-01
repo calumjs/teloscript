@@ -1,0 +1,26 @@
+{
+	"node": "n8n-nodes-base.TeloscriptAgent",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": [
+		"AI",
+		"Utility"
+	],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/your-username/teloscript/blob/main/README.md#authentication"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/your-username/teloscript"
+			}
+		]
+	},
+	"alias": ["TELOSCRIPT", "Agent", "Automation", "MCP"],
+	"subcategories": {
+		"AI": ["Agents", "Automation"],
+		"Utility": ["Helpers"]
+	}
+}

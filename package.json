@@ -1,0 +1,64 @@
+{
+	"name": "n8n-nodes-teloscript",
+	"version": "1.0.0",
+	"description": "n8n nodes for TELOSCRIPT agent orchestration platform",
+	"keywords": [
+		"n8n-community-node-package",
+		"teloscript",
+		"agents",
+		"mcp",
+		"automation",
+		"ai",
+		"orchestration"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/your-username/n8n-nodes-teloscript",
+	"author": {
+		"name": "Your Name",
+		"email": "your.email@example.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/your-username/n8n-nodes-teloscript.git"
+	},
+	"engines": {
+		"node": ">=18.10",
+		"pnpm": ">=8.1"
+	},
+	"packageManager": "pnpm@8.1.0",
+	"main": "index.js",
+	"scripts": {
+		"build": "tsc && gulp build:icons",
+		"dev": "tsc --watch",
+		"format": "prettier nodes credentials utils --write",
+		"lint": "eslint nodes credentials utils",
+		"lintfix": "eslint nodes credentials utils --fix",
+		"prepublishOnly": "npm run build && npm run lint",
+		"test": "jest"
+	},
+	"files": [
+		"dist"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"credentials": [
+			"dist/credentials/TeloscriptApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/TeloscriptAgent/TeloscriptAgent.node.js",
+			"dist/nodes/TeloscriptPurpose/TeloscriptPurpose.node.js"
+		]
+	},
+	"devDependencies": {
+		"@types/node": "^18.16.1",
+		"@typescript-eslint/parser": "^5.45.0",
+		"eslint-plugin-n8n-nodes-base": "^1.11.0",
+		"gulp": "^4.0.2",
+		"n8n-workflow": "*",
+		"prettier": "^2.7.1",
+		"typescript": "^5.0.4"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}

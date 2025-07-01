@@ -436,3 +436,273 @@ We welcome contributions that align with TELOSCRIPT's philosophy of purposeful t
 ---
 
 **TELOSCRIPT** - *Where purpose meets autonomous coordination*
+
+# n8n-nodes-teloscript
+
+n8n community nodes for [TELOSCRIPT](https://github.com/your-username/teloscript) - A purposeful agent orchestration platform that coordinates MCP (Model Context Protocol) servers toward intelligent goals.
+
+![TELOSCRIPT](https://img.shields.io/badge/TELOSCRIPT-Agent%20Orchestration-blue)
+![n8n](https://img.shields.io/badge/n8n-Community%20Node-orange)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+## Installation
+
+### Community Package (Recommended)
+
+Install via n8n's community package manager:
+
+1. Go to **Settings** → **Community nodes**
+2. Select **Install**
+3. Enter `n8n-nodes-teloscript`
+4. Click **Install**
+
+### Manual Installation
+
+```bash
+# For global n8n installation
+npm install -g n8n-nodes-teloscript
+
+# For local n8n installation
+cd ~/.n8n/custom # or your custom nodes directory
+npm install n8n-nodes-teloscript
+```
+
+## Prerequisites
+
+- **TELOSCRIPT Instance**: You need a running TELOSCRIPT instance
+- **n8n**: Version 0.190.0 or later
+- **Node.js**: Version 18.10 or later
+
+## Included Nodes
+
+### 🤖 TELOSCRIPT Agent
+
+Launch and manage autonomous agents with custom goals and MCP server configurations.
+
+**Operations:**
+- **Launch Simple**: Create an agent with a text goal using default filesystem server
+- **Launch Advanced**: Create an agent with custom MCP server configuration
+- **Get Status**: Check the execution status of a running agent
+- **Cancel**: Stop a running agent
+- **List All**: Get all active agents
+
+**Key Features:**
+- Custom goal definition
+- MCP server configuration (filesystem, web search, GitHub, etc.)
+- Real-time progress monitoring
+- Configurable timeouts and iterations
+- Error handling and retry logic
+
+### 🎯 TELOSCRIPT Purpose
+
+Execute predefined purpose endpoints for common workflows.
+
+**Operations:**
+- **Execute**: Run a specific purpose endpoint
+- **List Available**: Get all available purpose endpoints
+- **Get Details**: Get information about a specific purpose
+
+**Built-in Purposes:**
+- **GitHub Webhook Handler**: Process GitHub webhooks automatically
+- **Code Change Analyzer**: Analyze code changes and provide insights
+- **Topic Researcher**: Research topics and generate comprehensive reports
+
+**Key Features:**
+- Dynamic purpose endpoint loading
+- JSON input data support
+- Stream processing for real-time updates
+- Automatic data merging from previous nodes
+
+## Quick Start
+
+### 1. Set up Credentials
+
+Create a **TELOSCRIPT API** credential with:
+- **Base URL**: Your TELOSCRIPT instance URL (e.g., `http://localhost:8000`)
+- **API Key**: Optional authentication key if configured
+
+### 2. Simple Agent Example
+
+```mermaid
+graph LR
+    A[Manual Trigger] --> B[TELOSCRIPT Agent]
+    B --> C[Display Result]
+```
+
+1. Add a **Manual Trigger** node
+2. Add a **TELOSCRIPT Agent** node
+3. Configure:
+   - **Operation**: Launch Simple
+   - **Goal**: "Analyze the files in the current directory and create a summary report"
+4. Add a **Code** node to process the results
+
+### 3. Purpose Execution Example
+
+```mermaid
+graph LR
+    A[Webhook] --> B[TELOSCRIPT Purpose]
+    B --> C[Send Email]
+```
+
+1. Add a **Webhook** node to receive GitHub webhooks
+2. Add a **TELOSCRIPT Purpose** node
+3. Configure:
+   - **Operation**: Execute
+   - **Purpose Endpoint**: handle-github-webhook
+   - **Input Data**: Data from webhook
+4. Add follow-up actions based on the analysis
+
+## Advanced Configuration
+
+### Custom MCP Servers
+
+The TELOSCRIPT Agent node supports configuring custom MCP servers:
+
+```json
+{
+  "name": "brave-search",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+  "env": {
+    "BRAVE_API_KEY": "your-api-key"
+  },
+  "transport": "stdio"
+}
+```
+
+### Input Data Processing
+
+The TELOSCRIPT Purpose node automatically merges:
+1. Data from previous n8n nodes
+2. Custom JSON input data
+3. Node configuration parameters
+
+## Error Handling
+
+Both nodes include comprehensive error handling:
+
+- **Connection errors**: Clear messages when TELOSCRIPT is unreachable
+- **API errors**: Detailed error descriptions from TELOSCRIPT
+- **Timeout handling**: Configurable timeouts for long-running operations
+- **Retry logic**: Automatic retries for transient failures
+
+## API Endpoints Used
+
+| Endpoint | Purpose | Node |
+|----------|---------|------|
+| `POST /agents` | Launch agents | TELOSCRIPT Agent |
+| `GET /agents/{id}/status` | Get agent status | TELOSCRIPT Agent |
+| `DELETE /agents/{id}` | Cancel agent | TELOSCRIPT Agent |
+| `GET /agents` | List agents | TELOSCRIPT Agent |
+| `POST /purpose/{slug}` | Execute purpose | TELOSCRIPT Purpose |
+| `GET /purpose/endpoints` | List purposes | TELOSCRIPT Purpose |
+| `GET /health` | Health check | Credentials |
+
+## Use Cases
+
+### 1. Automated Research Pipeline
+- **Trigger**: Schedule or webhook
+- **Action**: Research a topic using TELOSCRIPT Purpose
+- **Follow-up**: Send results via email or save to database
+
+### 2. Code Analysis Workflow
+- **Trigger**: GitHub webhook on pull request
+- **Action**: Analyze code changes with TELOSCRIPT Purpose
+- **Follow-up**: Post comments back to GitHub
+
+### 3. Dynamic Agent Creation
+- **Trigger**: Form submission or API call
+- **Action**: Create custom agent with specific MCP servers
+- **Follow-up**: Process results and notify stakeholders
+
+### 4. Multi-step Automation
+- **Step 1**: Execute research purpose
+- **Step 2**: Launch analysis agent with research data
+- **Step 3**: Generate final report
+- **Step 4**: Distribute to multiple channels
+
+## Configuration Examples
+
+### Environment Variables for MCP Servers
+
+```json
+{
+  "env": {
+    "BRAVE_API_KEY": "your-brave-api-key",
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "your-github-token",
+    "OPENAI_API_KEY": "your-openai-key"
+  }
+}
+```
+
+### Advanced Agent Configuration
+
+```json
+{
+  "goal": "Research the latest developments in quantum computing and create a technical report",
+  "servers": [
+    {
+      "name": "brave-search",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"]
+    },
+    {
+      "name": "filesystem",
+      "command": "npx", 
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "./reports"]
+    }
+  ],
+  "max_iterations": 25,
+  "timeout": 600
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"Could not connect to TELOSCRIPT API"**
+   - Verify TELOSCRIPT is running
+   - Check the base URL in credentials
+   - Ensure network connectivity
+
+2. **"No purpose endpoints found"**
+   - Check TELOSCRIPT configuration
+   - Verify purpose endpoints are properly configured
+   - Restart TELOSCRIPT if needed
+
+3. **Agent timeout errors**
+   - Increase timeout values
+   - Check MCP server configurations
+   - Monitor TELOSCRIPT logs
+
+### Debug Tips
+
+- Enable **Continue On Fail** to see detailed error messages
+- Use the **Code** node to inspect data structures
+- Check TELOSCRIPT logs for detailed execution information
+- Test credentials with a simple health check
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Links
+
+- [TELOSCRIPT Repository](https://github.com/your-username/teloscript)
+- [n8n Community](https://community.n8n.io/)
+- [MCP Protocol](https://github.com/modelcontextprotocol)
+
+## Support
+
+- [GitHub Issues](https://github.com/your-username/n8n-nodes-teloscript/issues)
+- [n8n Community Forum](https://community.n8n.io/)
+- [TELOSCRIPT Documentation](https://github.com/your-username/teloscript/blob/main/README.md)
