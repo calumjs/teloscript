@@ -1,0 +1,122 @@
+# Example Docker Compose for n8n with TELOSCRIPT Package
+# This is a quick-start example for testing the TELOSCRIPT n8n integration
+
+version: '3.8'
+
+services:
+  # n8n with TELOSCRIPT package
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-teloscript
+    ports:
+      - "5678:5678"
+    environment:
+      # Enable community packages
+      - N8N_COMMUNITY_PACKAGES_ENABLED=true
+      
+      # Optional: Auto-install TELOSCRIPT package (once published)
+      # - N8N_NODES_INCLUDE=n8n-nodes-teloscript
+      
+      # Basic authentication (optional)
+      - N8N_BASIC_AUTH_ACTIVE=false
+      
+      # TELOSCRIPT connection
+      - TELOSCRIPT_BASE_URL=http://teloscript:8000
+      
+      # Timezone
+      - GENERIC_TIMEZONE=America/New_York
+      
+      # Development settings
+      - NODE_ENV=development
+      - N8N_LOG_LEVEL=debug
+      
+    volumes:
+      # Persist n8n data
+      - n8n_data:/home/node/.n8n
+      
+      # For development: mount local node package
+      # Uncomment if you're developing the package locally
+      # - ./dist:/home/node/.n8n/custom/node_modules/n8n-nodes-teloscript
+      
+    depends_on:
+      - teloscript
+    restart: unless-stopped
+    networks:
+      - teloscript-network
+
+  # TELOSCRIPT Agent Orchestration Platform
+  teloscript:
+    build: 
+      context: ../Docker.Agent  # Path to your TELOSCRIPT project
+      dockerfile: Dockerfile
+    container_name: teloscript-api
+    ports:
+      - "8000:8000"
+    environment:
+      # OpenAI API key for agent operations
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      
+      # TELOSCRIPT configuration
+      - HOST=0.0.0.0
+      - PORT=8000
+      
+      # Development settings
+      - LOG_LEVEL=info
+      - DEBUG=true
+      
+    volumes:
+      # Persist TELOSCRIPT data
+      - teloscript_data:/app/data
+      - teloscript_logs:/app/logs
+      
+      # Mount MCP configurations
+      - ../Docker.Agent/config:/app/config
+      
+    restart: unless-stopped
+    networks:
+      - teloscript-network
+
+  # Optional: PostgreSQL for production use
+  # Uncomment for persistent database storage
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: postgres-db
+  #   environment:
+  #     POSTGRES_DB: n8n
+  #     POSTGRES_USER: n8n
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-n8n-password}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - teloscript-network
+
+volumes:
+  n8n_data:
+    driver: local
+  teloscript_data:
+    driver: local
+  teloscript_logs:
+    driver: local
+  # postgres_data:
+  #   driver: local
+
+networks:
+  teloscript-network:
+    driver: bridge
+
+# Development Notes:
+# 1. Copy this file to docker-compose.yml
+# 2. Create .env file with OPENAI_API_KEY=your-key-here
+# 3. Run: docker-compose up -d
+# 4. Access n8n at http://localhost:5678
+# 5. Access TELOSCRIPT at http://localhost:8000
+# 6. Install n8n-nodes-teloscript via n8n UI (Settings > Community Nodes)
+# 7. Create workflows using TELOSCRIPT Agent and Purpose nodes
+#
+# For production use:
+# - Enable authentication (N8N_BASIC_AUTH_ACTIVE=true)
+# - Use external database (uncomment postgres service)
+# - Add SSL/TLS termination
+# - Configure proper environment variables
+# - Set up monitoring and backups

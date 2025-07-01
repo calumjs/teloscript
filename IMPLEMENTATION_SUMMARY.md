@@ -153,13 +153,43 @@ npm install n8n-nodes-teloscript
 ```
 
 ### Method 3: Self-hosted with Docker
-From the web search, users can add to their n8n Docker setup:
+Multiple Docker deployment options available:
+
+**Simple Installation:**
 ```dockerfile
 FROM n8nio/n8n:latest
 USER root
 RUN npm install -g n8n-nodes-teloscript
 USER node
 ```
+
+**With TELOSCRIPT Integration:**
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      - N8N_NODES_INCLUDE=n8n-nodes-teloscript
+      - TELOSCRIPT_BASE_URL=http://teloscript:8000
+    depends_on:
+      - teloscript
+  
+  teloscript:
+    build: ../teloscript
+    ports:
+      - "8000:8000"
+```
+
+**Production Setup:**
+- PostgreSQL database
+- SSL/TLS with nginx reverse proxy
+- Health checks and monitoring
+- Backup strategies
+- Kubernetes deployment options
+
+See `DOCKER_DEPLOYMENT_GUIDE.md` for complete details.
 
 ## What Users Can Do
 
